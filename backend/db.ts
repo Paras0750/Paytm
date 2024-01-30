@@ -1,4 +1,4 @@
-import mongoose, { Mongoose, Schema, mongo } from "mongoose";
+import mongoose, { Schema } from "mongoose";
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -18,6 +18,18 @@ export interface IUser extends Document {
   firstName: string;
   lastName: string;
 }
+
+const accountsSchema = new mongoose.Schema({
+  userId: {
+    type: Schema.Types.ObjectId,
+    ref: "User",
+    required: true,
+  },
+  balance: {
+    type: Number,
+    required: true,
+  },
+});
 
 const userSchema = new mongoose.Schema({
   username: {
@@ -49,3 +61,4 @@ const userSchema = new mongoose.Schema({
 });
 
 export const User = mongoose.model<IUser>("Users", userSchema);
+export const Account = mongoose.model("Account", accountsSchema);

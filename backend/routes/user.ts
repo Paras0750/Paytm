@@ -1,11 +1,84 @@
 import { Request, Response, Router } from "express";
-import { User } from "../db";
+import { Account, User } from "../db";
 import zod from "zod";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
+import { authMiddleware } from "../middleware";
+import { randomInt } from "crypto";
 dotenv.config();
 
 const userRoutes = Router();
+export interface ProtectRequest extends Request {
+  userId?: string;
+}
+
+userRoutes.get("/bulk", async (req: Request, res: Response) => {
+  const filter = req.query.filter || "";
+  console.log(filter);
+
+  const users = await User.find({
+    $or: [
+      {
+        firstName: {
+          $regex: filter,
+        },
+      },
+      {
+        lastName: {
+          $regex: filter,
+        },
+      },
+    ],
+  });
+
+  res.status(200).json({
+    user: users.map((user) => ({
+      username: user.username,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      _id: user._id,
+    })),
+  });
+});
+
+const updateBody = zod.object({
+  password: zod.string().min(6),
+  firstName: zod.string(),
+  lastName: zod.string(),
+});
+
+userRoutes.post(
+  "/update",
+  authMiddleware,
+  async (req: ProtectRequest, res: Response) => {
+    const { success } = updateBody.safeParse(req.body);
+    if (!success) {
+      return res.status(411).json({
+        message: "Incorrect inputs",
+      });
+    }
+    const { password, firstName, lastName } = req.body;
+    if (password.length < 6) {
+      return res.status(411).json({
+        message: "Password Length can't be smaller than 6 digits",
+      });
+    }
+    try {
+      await User.updateOne(
+        { _id: req.userId },
+        { firstName: firstName, lastName: lastName, password: password }
+      );
+
+      return res.status(200).json({
+        message: "User Details updated successfully",
+      });
+    } catch (err) {
+      return res.status(500).json({
+        message: "Server error",
+      });
+    }
+  }
+);
 
 const signinBody = zod.object({
   username: zod.string().email(),
@@ -79,6 +152,10 @@ userRoutes.post("/signup", async (req, res) => {
     firstName: req.body.firstName,
     lastName: req.body.lastName,
   });
+  await Account.create({
+    userId: user._id,
+    balance: randomInt(10000)
+  })
   const userId = user._id;
 
   const token = jwt.sign(
