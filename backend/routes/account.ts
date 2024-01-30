@@ -35,6 +35,7 @@ accountRoutes.post("/transfer", authMiddleware, async (req: ProtectRequest, res:
 
   session.startTransaction();
   const { amount, to } = req.body;
+  console.log(amount, to);
 
   // Fetch the accounts within the transaction
   const account = await Account.findOne({ userId: req.userId }).session(

@@ -104,15 +104,19 @@ userRoutes.post("/signin", async (req: Request, res: Response) => {
     if (req.body.password !== user?.password) {
       return res.status(401).send("Password Do Not Match!");
     }
+    // token valid for 1 hour
     const userId = user?._id;
+
     const token = jwt.sign(
       {
         userId,
       },
-      process.env.JWT_SECRET || ""
+      process.env.JWT_SECRET || "",
+      { expiresIn: "1h" }
     );
     res.status(200).json({
       token: token,
+      username: user?.firstName,
     });
   } catch (err) {
     console.log(err);
@@ -129,7 +133,8 @@ const signupBody = zod.object({
 
 userRoutes.post("/signup", async (req, res) => {
   const { success } = signupBody.safeParse(req.body);
-
+  console.log(req.body);
+  
   if (!success) {
     return res.status(411).json({
       message: "Incorrect inputs",
